@@ -1,1 +1,285 @@
-import { useState } from 'react'\nimport { Vector } from '../utils/Vector'\n\ntype VectorOperation = 'add' | 'subtract' | 'dot' | 'cross' | 'magnitude' | 'normalize' | 'angle' | 'distance' | 'scalar'\n\nconst VectorCalculator = () => {\n  const [vectorA, setVectorA] = useState<number[]>([1, 2, 3])\n  const [vectorB, setVectorB] = useState<number[]>([4, 5, 6])\n  const [scalar, setScalar] = useState<number>(2)\n  const [dimension, setDimension] = useState<number>(3)\n  const [operation, setOperation] = useState<VectorOperation>('add')\n  const [result, setResult] = useState<string>('')\n  const [error, setError] = useState<string>('')\n\n  const updateDimension = (newDim: number) => {\n    setDimension(newDim)\n    \n    // Adjust vectors to new dimension\n    const newVectorA = Array(newDim).fill(0).map((_, i) => vectorA[i] || 0)\n    const newVectorB = Array(newDim).fill(0).map((_, i) => vectorB[i] || 0)\n    \n    setVectorA(newVectorA)\n    setVectorB(newVectorB)\n  }\n\n  const updateVectorValue = (vector: 'A' | 'B', index: number, value: string) => {\n    const numValue = parseFloat(value) || 0\n    \n    if (vector === 'A') {\n      const newVector = [...vectorA]\n      newVector[index] = numValue\n      setVectorA(newVector)\n    } else {\n      const newVector = [...vectorB]\n      newVector[index] = numValue\n      setVectorB(newVector)\n    }\n  }\n\n  const renderVectorInput = (vector: number[], vectorName: 'A' | 'B') => {\n    return (\n      <div className=\"input-group\">\n        <label>Vettore {vectorName}</label>\n        <div \n          className=\"input-grid\"\n          style={{ \n            gridTemplateColumns: `repeat(${Math.min(dimension, 4)}, 1fr)`,\n            gap: '0.5rem'\n          }}\n        >\n          {vector.map((value, index) => (\n            <div key={index}>\n              <label style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>\n                {vectorName}{index + 1}\n              </label>\n              <input\n                type=\"number\"\n                step=\"any\"\n                className=\"matrix-input\"\n                value={value}\n                onChange={(e) => updateVectorValue(vectorName, index, e.target.value)}\n              />\n            </div>\n          ))}\n        </div>\n      </div>\n    )\n  }\n\n  const calculate = () => {\n    try {\n      setError('')\n      const vA = new Vector(vectorA)\n      const vB = new Vector(vectorB)\n      let resultText = ''\n\n      switch (operation) {\n        case 'add':\n          const sum = vA.add(vB)\n          resultText = `A + B = ${sum.toString()}`\n          break\n        \n        case 'subtract':\n          const diff = vA.subtract(vB)\n          resultText = `A - B = ${diff.toString()}`\n          break\n        \n        case 'dot':\n          const dotProduct = vA.dot(vB)\n          resultText = `A · B = ${dotProduct.toFixed(6)}`\n          break\n        \n        case 'cross':\n          if (dimension !== 3) {\n            throw new Error('Il prodotto vettoriale è definito solo per vettori 3D')\n          }\n          const crossProduct = vA.cross(vB)\n          resultText = `A × B = ${crossProduct.toString()}`\n          break\n        \n        case 'magnitude':\n          const magA = vA.magnitude()\n          const magB = vB.magnitude()\n          resultText = `|A| = ${magA.toFixed(6)}\\n|B| = ${magB.toFixed(6)}`\n          break\n        \n        case 'normalize':\n          const normA = vA.normalize()\n          const normB = vB.normalize()\n          resultText = `Â = ${normA.toString()}\\nB̂ = ${normB.toString()}`\n          break\n        \n        case 'angle':\n          const angleRad = vA.angleTo(vB)\n          const angleDeg = (angleRad * 180) / Math.PI\n          resultText = `Angolo tra A e B:\\n${angleRad.toFixed(6)} radianti\\n${angleDeg.toFixed(6)} gradi`\n          break\n        \n        case 'distance':\n          const distance = vA.distanceTo(vB)\n          resultText = `Distanza tra A e B = ${distance.toFixed(6)}`\n          break\n        \n        case 'scalar':\n          const scalarMultA = vA.multiplyScalar(scalar)\n          resultText = `${scalar} × A = ${scalarMultA.toString()}`\n          break\n        \n        default:\n          throw new Error('Operazione non supportata')\n      }\n\n      setResult(resultText)\n    } catch (err) {\n      setError(err instanceof Error ? err.message : 'Errore sconosciuto')\n      setResult('')\n    }\n  }\n\n  const checkProperties = () => {\n    try {\n      const vA = new Vector(vectorA)\n      const vB = new Vector(vectorB)\n      \n      let properties = '🔍 Proprietà dei vettori:\\n\\n'\n      \n      // Magnitudes\n      properties += `Magnitudo A: ${vA.magnitude().toFixed(6)}\\n`\n      properties += `Magnitudo B: ${vB.magnitude().toFixed(6)}\\n\\n`\n      \n      // Check if parallel\n      properties += `Paralleli: ${vA.isParallelTo(vB) ? 'Sì' : 'No'}\\n`\n      \n      // Check if orthogonal\n      properties += `Ortogonali: ${vA.isOrthogonalTo(vB) ? 'Sì' : 'No'}\\n\\n`\n      \n      // Angle\n      const angle = vA.angleTo(vB)\n      properties += `Angolo: ${angle.toFixed(6)} rad (${(angle * 180 / Math.PI).toFixed(6)}°)\\n\\n`\n      \n      // Dot product\n      properties += `Prodotto scalare: ${vA.dot(vB).toFixed(6)}\\n`\n      \n      // Distance\n      properties += `Distanza: ${vA.distanceTo(vB).toFixed(6)}\\n`\n      \n      // Cross product (if 3D)\n      if (dimension === 3) {\n        const cross = vA.cross(vB)\n        properties += `\\nProdotto vettoriale: ${cross.toString()}\\n`\n        properties += `Magnitudo prodotto vettoriale: ${cross.magnitude().toFixed(6)}`\n      }\n      \n      setResult(properties)\n      setError('')\n    } catch (err) {\n      setError(err instanceof Error ? err.message : 'Errore sconosciuto')\n      setResult('')\n    }\n  }\n\n  const needsVectorB = ['add', 'subtract', 'dot', 'cross', 'angle', 'distance'].includes(operation)\n  const needsScalar = operation === 'scalar'\n\n  return (\n    <div className=\"calculator-container\">\n      <h2 className=\"calculator-title\">🎯 Calcolatore di Vettori</h2>\n      \n      <div className=\"input-group\">\n        <label>Dimensione dei vettori</label>\n        <select \n          value={dimension} \n          onChange={(e) => updateDimension(parseInt(e.target.value))}\n        >\n          <option value={2}>2D</option>\n          <option value={3}>3D</option>\n          <option value={4}>4D</option>\n          <option value={5}>5D</option>\n        </select>\n      </div>\n      \n      <div className=\"input-group\">\n        <label>Operazione</label>\n        <select \n          value={operation} \n          onChange={(e) => setOperation(e.target.value as VectorOperation)}\n        >\n          <option value=\"add\">Addizione (A + B)</option>\n          <option value=\"subtract\">Sottrazione (A - B)</option>\n          <option value=\"dot\">Prodotto scalare (A · B)</option>\n          {dimension === 3 && <option value=\"cross\">Prodotto vettoriale (A × B)</option>}\n          <option value=\"magnitude\">Magnitudo |A|, |B|</option>\n          <option value=\"normalize\">Normalizzazione</option>\n          <option value=\"angle\">Angolo tra vettori</option>\n          <option value=\"distance\">Distanza tra vettori</option>\n          <option value=\"scalar\">Moltiplicazione scalare</option>\n        </select>\n      </div>\n\n      <div style={{ display: 'grid', gridTemplateColumns: needsVectorB ? '1fr 1fr' : '1fr', gap: '2rem' }}>\n        {renderVectorInput(vectorA, 'A')}\n        {needsVectorB && renderVectorInput(vectorB, 'B')}\n      </div>\n\n      {needsScalar && (\n        <div className=\"input-group\">\n          <label>Scalare</label>\n          <input\n            type=\"number\"\n            step=\"any\"\n            value={scalar}\n            onChange={(e) => setScalar(parseFloat(e.target.value) || 0)}\n          />\n        </div>\n      )}\n\n      <div className=\"btn-group\">\n        <button className=\"btn btn-primary\" onClick={calculate}>\n          Calcola\n        </button>\n        <button className=\"btn btn-success\" onClick={checkProperties}>\n          Analizza Proprietà\n        </button>\n        <button \n          className=\"btn btn-secondary\" \n          onClick={() => {\n            setVectorA([1, 2, 3].slice(0, dimension).concat(Array(Math.max(0, dimension - 3)).fill(0)))\n            setVectorB([4, 5, 6].slice(0, dimension).concat(Array(Math.max(0, dimension - 3)).fill(0)))\n            setResult('')\n            setError('')\n          }}\n        >\n          Reset\n        </button>\n      </div>\n\n      {error && (\n        <div className=\"error\">\n          <strong>Errore:</strong> {error}\n        </div>\n      )}\n\n      {result && (\n        <div className=\"result-section\">\n          <h3 className=\"result-title\">Risultato</h3>\n          <div className=\"result-vector\">\n            <pre style={{ whiteSpace: 'pre-wrap' }}>{result}</pre>\n          </div>\n        </div>\n      )}\n      \n      <div style={{ marginTop: '2rem', padding: '1rem', background: '#e8f5e8', borderRadius: '6px', fontSize: '0.9rem' }}>\n        <h4 style={{ marginBottom: '1rem', color: '#2e7d32' }}>🎯 Operazioni Vettoriali</h4>\n        <ul style={{ marginLeft: '1rem', lineHeight: '1.6' }}>\n          <li><strong>Prodotto scalare:</strong> A · B = |A||B|cos(θ)</li>\n          <li><strong>Prodotto vettoriale:</strong> |A × B| = |A||B|sin(θ) (solo 3D)</li>\n          <li><strong>Normalizzazione:</strong> Â = A/|A| (vettore unitario)</li>\n          <li><strong>Angolo:</strong> θ = arccos((A·B)/(|A||B|))</li>\n        </ul>\n      </div>\n    </div>\n  )\n}\n\nexport default VectorCalculator
+import { useState } from 'react'
+import { Vector } from '../utils/Vector'
+
+type VectorOperation = 'add' | 'subtract' | 'dot' | 'cross' | 'magnitude' | 'normalize' | 'angle' | 'distance' | 'scalar'
+
+const VectorCalculator = () => {
+  const [vectorA, setVectorA] = useState<number[]>([1, 2, 3])
+  const [vectorB, setVectorB] = useState<number[]>([4, 5, 6])
+  const [scalar, setScalar] = useState<number>(2)
+  const [dimension, setDimension] = useState<number>(3)
+  const [operation, setOperation] = useState<VectorOperation>('add')
+  const [result, setResult] = useState<string>('')
+  const [error, setError] = useState<string>('')
+
+  const updateDimension = (newDim: number) => {
+	setDimension(newDim)
+	
+	// Adjust vectors to new dimension
+	const newVectorA = Array(newDim).fill(0).map((_, i) => vectorA[i] || 0)
+	const newVectorB = Array(newDim).fill(0).map((_, i) => vectorB[i] || 0)
+	
+	setVectorA(newVectorA)
+	setVectorB(newVectorB)
+  }
+
+  const updateVectorValue = (vector: 'A' | 'B', index: number, value: string) => {
+	const numValue = parseFloat(value) || 0
+	
+	if (vector === 'A') {
+	  const newVector = [...vectorA]
+	  newVector[index] = numValue
+	  setVectorA(newVector)
+	} else {
+	  const newVector = [...vectorB]
+	  newVector[index] = numValue
+	  setVectorB(newVector)
+	}
+  }
+
+  const renderVectorInput = (vector: number[], vectorName: 'A' | 'B') => {
+	return (
+	  <div className="input-group">
+		<label>Vettore {vectorName}</label>
+		<div 
+		  className="input-grid"
+		  style={{ 
+			gridTemplateColumns: `repeat(${Math.min(dimension, 4)}, 1fr)`,
+			gap: '0.5rem'
+		  }}
+		>
+		  {vector.map((value, index) => (
+			<div key={index}>
+			  <label style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>
+				{vectorName}{index + 1}
+			  </label>
+			  <input
+				type="number"
+				step="any"
+				className="matrix-input"
+				value={value}
+				onChange={(e) => updateVectorValue(vectorName, index, e.target.value)}
+			  />
+			</div>
+		  ))}
+		</div>
+	  </div>
+	)
+  }
+
+  const calculate = () => {
+	try {
+	  setError('')
+	  const vA = new Vector(vectorA)
+	  const vB = new Vector(vectorB)
+	  let resultText = ''
+
+	  switch (operation) {
+		case 'add':
+		  const sum = vA.add(vB)
+		  resultText = `A + B = ${sum.toString()}`
+		  break
+		
+		case 'subtract':
+		  const diff = vA.subtract(vB)
+		  resultText = `A - B = ${diff.toString()}`
+		  break
+		
+		case 'dot':
+		  const dotProduct = vA.dot(vB)
+		  resultText = `A · B = ${dotProduct.toFixed(6)}`
+		  break
+		
+		case 'cross':
+		  if (dimension !== 3) {
+			throw new Error('Il prodotto vettoriale è definito solo per vettori 3D')
+		  }
+		  const crossProduct = vA.cross(vB)
+		  resultText = `A × B = ${crossProduct.toString()}`
+		  break
+		
+		case 'magnitude':
+		  const magA = vA.magnitude()
+		  const magB = vB.magnitude()
+		  resultText = `|A| = ${magA.toFixed(6)}\n|B| = ${magB.toFixed(6)}`
+		  break
+		
+		case 'normalize':
+		  const normA = vA.normalize()
+		  const normB = vB.normalize()
+		  resultText = `Â = ${normA.toString()}\nB̂ = ${normB.toString()}`
+		  break
+		
+		case 'angle':
+		  const angleRad = vA.angleTo(vB)
+		  const angleDeg = (angleRad * 180) / Math.PI
+		  resultText = `Angolo tra A e B:\n${angleRad.toFixed(6)} radianti\n${angleDeg.toFixed(6)} gradi`
+		  break
+		
+		case 'distance':
+		  const distance = vA.distanceTo(vB)
+		  resultText = `Distanza tra A e B = ${distance.toFixed(6)}`
+		  break
+		
+		case 'scalar':
+		  const scalarMultA = vA.multiplyScalar(scalar)
+		  resultText = `${scalar} × A = ${scalarMultA.toString()}`
+		  break
+		
+		default:
+		  throw new Error('Operazione non supportata')
+	  }
+
+	  setResult(resultText)
+	} catch (err) {
+	  setError(err instanceof Error ? err.message : 'Errore sconosciuto')
+	  setResult('')
+	}
+  }
+
+  const checkProperties = () => {
+	try {
+	  const vA = new Vector(vectorA)
+	  const vB = new Vector(vectorB)
+	  
+	  let properties = '🔍 Proprietà dei vettori:\n\n'
+	  
+	  // Magnitudes
+	  properties += `Magnitudo A: ${vA.magnitude().toFixed(6)}\n`
+	  properties += `Magnitudo B: ${vB.magnitude().toFixed(6)}\n\n`
+	  
+	  // Check if parallel
+	  properties += `Paralleli: ${vA.isParallelTo(vB) ? 'Sì' : 'No'}\n`
+	  
+	  // Check if orthogonal
+	  properties += `Ortogonali: ${vA.isOrthogonalTo(vB) ? 'Sì' : 'No'}\n\n`
+	  
+	  // Angle
+	  const angle = vA.angleTo(vB)
+	  properties += `Angolo: ${angle.toFixed(6)} rad (${(angle * 180 / Math.PI).toFixed(6)}°)\n\n`
+	  
+	  // Dot product
+	  properties += `Prodotto scalare: ${vA.dot(vB).toFixed(6)}\n`
+	  
+	  // Distance
+	  properties += `Distanza: ${vA.distanceTo(vB).toFixed(6)}\n`
+	  
+	  // Cross product (if 3D)
+	  if (dimension === 3) {
+		const cross = vA.cross(vB)
+		properties += `\nProdotto vettoriale: ${cross.toString()}\n`
+		properties += `Magnitudo prodotto vettoriale: ${cross.magnitude().toFixed(6)}`
+	  }
+	  
+	  setResult(properties)
+	  setError('')
+	} catch (err) {
+	  setError(err instanceof Error ? err.message : 'Errore sconosciuto')
+	  setResult('')
+	}
+  }
+
+  const needsVectorB = ['add', 'subtract', 'dot', 'cross', 'angle', 'distance'].includes(operation)
+  const needsScalar = operation === 'scalar'
+
+  return (
+	<div className="calculator-container">
+	  <h2 className="calculator-title">🎯 Calcolatore di Vettori</h2>
+	  
+	  <div className="input-group">
+		<label>Dimensione dei vettori</label>
+		<select 
+		  value={dimension} 
+		  onChange={(e) => updateDimension(parseInt(e.target.value))}
+		>
+		  <option value={2}>2D</option>
+		  <option value={3}>3D</option>
+		  <option value={4}>4D</option>
+		  <option value={5}>5D</option>
+		</select>
+	  </div>
+	  
+	  <div className="input-group">
+		<label>Operazione</label>
+		<select 
+		  value={operation} 
+		  onChange={(e) => setOperation(e.target.value as VectorOperation)}
+		>
+		  <option value="add">Addizione (A + B)</option>
+		  <option value="subtract">Sottrazione (A - B)</option>
+		  <option value="dot">Prodotto scalare (A · B)</option>
+		  {dimension === 3 && <option value="cross">Prodotto vettoriale (A × B)</option>}
+		  <option value="magnitude">Magnitudo |A|, |B|</option>
+		  <option value="normalize">Normalizzazione</option>
+		  <option value="angle">Angolo tra vettori</option>
+		  <option value="distance">Distanza tra vettori</option>
+		  <option value="scalar">Moltiplicazione scalare</option>
+		</select>
+	  </div>
+
+	  <div style={{ display: 'grid', gridTemplateColumns: needsVectorB ? '1fr 1fr' : '1fr', gap: '2rem' }}>
+		{renderVectorInput(vectorA, 'A')}
+		{needsVectorB && renderVectorInput(vectorB, 'B')}
+	  </div>
+
+	  {needsScalar && (
+		<div className="input-group">
+		  <label>Scalare</label>
+		  <input
+			type="number"
+			step="any"
+			value={scalar}
+			onChange={(e) => setScalar(parseFloat(e.target.value) || 0)}
+		  />
+		</div>
+	  )}
+
+	  <div className="btn-group">
+		<button className="btn btn-primary" onClick={calculate}>
+		  Calcola
+		</button>
+		<button className="btn btn-success" onClick={checkProperties}>
+		  Analizza Proprietà
+		</button>
+		<button 
+		  className="btn btn-secondary" 
+		  onClick={() => {
+			setVectorA([1, 2, 3].slice(0, dimension).concat(Array(Math.max(0, dimension - 3)).fill(0)))
+			setVectorB([4, 5, 6].slice(0, dimension).concat(Array(Math.max(0, dimension - 3)).fill(0)))
+			setResult('')
+			setError('')
+		  }}
+		>
+		  Reset
+		</button>
+	  </div>
+
+	  {error && (
+		<div className="error">
+		  <strong>Errore:</strong> {error}
+		</div>
+	  )}
+
+	  {result && (
+		<div className="result-section">
+		  <h3 className="result-title">Risultato</h3>
+		  <div className="result-vector">
+			<pre style={{ whiteSpace: 'pre-wrap' }}>{result}</pre>
+		  </div>
+		</div>
+	  )}
+	  
+	  <div style={{ marginTop: '2rem', padding: '1rem', background: '#e8f5e8', borderRadius: '6px', fontSize: '0.9rem' }}>
+		<h4 style={{ marginBottom: '1rem', color: '#2e7d32' }}>🎯 Operazioni Vettoriali</h4>
+		<ul style={{ marginLeft: '1rem', lineHeight: '1.6' }}>
+		  <li><strong>Prodotto scalare:</strong> A · B = |A||B|cos(θ)</li>
+		  <li><strong>Prodotto vettoriale:</strong> |A × B| = |A||B|sin(θ) (solo 3D)</li>
+		  <li><strong>Normalizzazione:</strong> Â = A/|A| (vettore unitario)</li>
+		  <li><strong>Angolo:</strong> θ = arccos((A·B)/(|A||B|))</li>
+		</ul>
+	  </div>
+	</div>
+  )
+}
+
+export default VectorCalculator

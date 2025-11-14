@@ -1,1 +1,246 @@
-import { useState } from 'react'\nimport { LinearAlgebra, LinearSystemSolution } from '../utils/LinearAlgebra'\n\nconst LinearSystemSolver = () => {\n  const [systemSize, setSystemSize] = useState(3)\n  const [coefficients, setCoefficients] = useState<number[][]>([\n    [2, 1, -1],\n    [-3, -1, 2],\n    [-2, 1, 2]\n  ])\n  const [constants, setConstants] = useState<number[]>([8, -11, -3])\n  const [solution, setSolution] = useState<LinearSystemSolution | null>(null)\n  const [showSteps, setShowSteps] = useState(false)\n\n  const updateSystemSize = (size: number) => {\n    setSystemSize(size)\n    \n    // Update coefficients matrix\n    const newCoefficients = Array(size).fill(0).map((_, i) => \n      Array(size).fill(0).map((_, j) => coefficients[i]?.[j] || 0)\n    )\n    setCoefficients(newCoefficients)\n    \n    // Update constants vector\n    const newConstants = Array(size).fill(0).map((_, i) => constants[i] || 0)\n    setConstants(newConstants)\n  }\n\n  const updateCoefficient = (row: number, col: number, value: string) => {\n    const numValue = parseFloat(value) || 0\n    const newCoefficients = [...coefficients]\n    newCoefficients[row][col] = numValue\n    setCoefficients(newCoefficients)\n  }\n\n  const updateConstant = (index: number, value: string) => {\n    const numValue = parseFloat(value) || 0\n    const newConstants = [...constants]\n    newConstants[index] = numValue\n    setConstants(newConstants)\n  }\n\n  const solve = () => {\n    try {\n      const result = LinearAlgebra.gaussianElimination(coefficients, constants)\n      setSolution(result)\n    } catch (error) {\n      setSolution({\n        isUnique: false,\n        hasInfiniteSolutions: false,\n        hasNoSolution: true,\n        steps: [error instanceof Error ? error.message : 'Errore sconosciuto']\n      })\n    }\n  }\n\n  const renderSystemInput = () => {\n    return (\n      <div className=\"input-group\">\n        <label>Sistema di Equazioni Lineari</label>\n        <div style={{ marginBottom: '1rem' }}>\n          <label>\n            Dimensione sistema: \n            <select \n              value={systemSize} \n              onChange={(e) => updateSystemSize(parseInt(e.target.value))}\n              style={{ marginLeft: '0.5rem', width: '60px' }}\n            >\n              {[2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}\n            </select>\n          </label>\n        </div>\n        \n        <div style={{ overflowX: 'auto' }}>\n          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0.5rem' }}>\n            <thead>\n              <tr>\n                {Array(systemSize).fill(0).map((_, i) => (\n                  <th key={i} style={{ textAlign: 'center' }}>x{i + 1}</th>\n                ))}\n                <th></th>\n                <th>b</th>\n              </tr>\n            </thead>\n            <tbody>\n              {coefficients.map((row, i) => (\n                <tr key={i}>\n                  {row.map((value, j) => (\n                    <td key={j}>\n                      <input\n                        type=\"number\"\n                        step=\"any\"\n                        className=\"matrix-input\"\n                        value={value}\n                        onChange={(e) => updateCoefficient(i, j, e.target.value)}\n                        style={{ width: '80px' }}\n                      />\n                    </td>\n                  ))}\n                  <td style={{ textAlign: 'center', fontSize: '1.2rem' }}>=</td>\n                  <td>\n                    <input\n                      type=\"number\"\n                      step=\"any\"\n                      className=\"matrix-input\"\n                      value={constants[i]}\n                      onChange={(e) => updateConstant(i, e.target.value)}\n                      style={{ width: '80px' }}\n                    />\n                  </td>\n                </tr>\n              ))}\n            </tbody>\n          </table>\n        </div>\n      </div>\n    )\n  }\n\n  const renderSolution = () => {\n    if (!solution) return null\n\n    return (\n      <div className=\"result-section\">\n        <h3 className=\"result-title\">Soluzione del Sistema</h3>\n        \n        {solution.hasNoSolution && (\n          <div className=\"error\">\n            <strong>Sistema inconsistente:</strong> Non esistono soluzioni.\n          </div>\n        )}\n        \n        {solution.hasInfiniteSolutions && (\n          <div style={{ padding: '1rem', background: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '4px' }}>\n            <strong>Sistema indeterminato:</strong> Infinite soluzioni.\n          </div>\n        )}\n        \n        {solution.isUnique && solution.solution && (\n          <div>\n            <h4>Soluzione unica:</h4>\n            <div className=\"result-vector\">\n              {solution.solution.map((value, index) => (\n                <div key={index} style={{ marginBottom: '0.5rem' }}>\n                  <strong>x{index + 1} = {value.toFixed(6)}</strong>\n                </div>\n              ))}\n            </div>\n          </div>\n        )}\n        \n        <div style={{ marginTop: '1rem' }}>\n          <label style={{ display: 'flex', alignItems: 'center' }}>\n            <input\n              type=\"checkbox\"\n              checked={showSteps}\n              onChange={(e) => setShowSteps(e.target.checked)}\n              style={{ marginRight: '0.5rem' }}\n            />\n            Mostra passaggi dettagliati\n          </label>\n        </div>\n        \n        {showSteps && solution.steps.length > 0 && (\n          <div className=\"steps-container\" style={{ marginTop: '1rem' }}>\n            <h4>Passaggi della risoluzione (MEG):</h4>\n            {solution.steps.map((step, index) => (\n              <div key={index} className=\"step\">\n                <div style={{ marginBottom: '0.5rem' }}>\n                  <strong>Passo {index + 1}:</strong>\n                </div>\n                <pre style={{ \n                  whiteSpace: 'pre-wrap', \n                  fontFamily: 'Courier New, monospace', \n                  background: '#f8f9fa', \n                  padding: '0.5rem', \n                  borderRadius: '4px',\n                  fontSize: '0.9rem'\n                }}>\n                  {step}\n                </pre>\n              </div>\n            ))}\n          </div>\n        )}\n      </div>\n    )\n  }\n\n  return (\n    <div className=\"calculator-container\">\n      <h2 className=\"calculator-title\">⚖️ Risolutore di Sistemi Lineari</h2>\n      <p style={{ textAlign: 'center', marginBottom: '2rem', color: '#666' }}>\n        Risolve sistemi di equazioni lineari usando il Metodo di Eliminazione di Gauss (MEG)\n      </p>\n      \n      {renderSystemInput()}\n\n      <div className=\"btn-group\" style={{ marginTop: '1.5rem' }}>\n        <button className=\"btn btn-primary\" onClick={solve}>\n          Risolvi Sistema\n        </button>\n        <button \n          className=\"btn btn-secondary\" \n          onClick={() => {\n            updateSystemSize(3)\n            setCoefficients([\n              [2, 1, -1],\n              [-3, -1, 2],\n              [-2, 1, 2]\n            ])\n            setConstants([8, -11, -3])\n            setSolution(null)\n            setShowSteps(false)\n          }}\n        >\n          Esempio\n        </button>\n        <button \n          className=\"btn btn-danger\" \n          onClick={() => {\n            setSolution(null)\n            setShowSteps(false)\n          }}\n        >\n          Pulisci Risultati\n        </button>\n      </div>\n\n      {renderSolution()}\n      \n      <div style={{ marginTop: '2rem', padding: '1rem', background: '#e3f2fd', borderRadius: '6px', fontSize: '0.9rem' }}>\n        <h4 style={{ marginBottom: '1rem', color: '#1976d2' }}>ℹ️ Informazioni sul MEG</h4>\n        <p><strong>Metodo di Eliminazione di Gauss:</strong></p>\n        <ul style={{ marginLeft: '1rem', lineHeight: '1.6' }}>\n          <li>Trasforma il sistema in forma triangolare superiore</li>\n          <li>Usa la sostituzione all'indietro per trovare le soluzioni</li>\n          <li>Rileva automaticamente sistemi inconsistenti o indeterminati</li>\n          <li>Mostra tutti i passaggi della risoluzione</li>\n        </ul>\n      </div>\n    </div>\n  )\n}\n\nexport default LinearSystemSolver
+import { useState } from 'react'
+import { LinearAlgebra, type LinearSystemSolution } from '../utils/LinearAlgebra'
+
+const LinearSystemSolver = () => {
+  const [systemSize, setSystemSize] = useState(3)
+  const [coefficients, setCoefficients] = useState<number[][]>([
+	[2, 1, -1],
+	[-3, -1, 2],
+	[-2, 1, 2]
+  ])
+  const [constants, setConstants] = useState<number[]>([8, -11, -3])
+  const [solution, setSolution] = useState<LinearSystemSolution | null>(null)
+  const [showSteps, setShowSteps] = useState(false)
+
+  const updateSystemSize = (size: number) => {
+	setSystemSize(size)
+	
+	// Update coefficients matrix
+	const newCoefficients = Array(size).fill(0).map((_, i) => 
+	  Array(size).fill(0).map((_, j) => coefficients[i]?.[j] || 0)
+	)
+	setCoefficients(newCoefficients)
+	
+	// Update constants vector
+	const newConstants = Array(size).fill(0).map((_, i) => constants[i] || 0)
+	setConstants(newConstants)
+  }
+
+  const updateCoefficient = (row: number, col: number, value: string) => {
+	const numValue = parseFloat(value) || 0
+	const newCoefficients = [...coefficients]
+	newCoefficients[row][col] = numValue
+	setCoefficients(newCoefficients)
+  }
+
+  const updateConstant = (index: number, value: string) => {
+	const numValue = parseFloat(value) || 0
+	const newConstants = [...constants]
+	newConstants[index] = numValue
+	setConstants(newConstants)
+  }
+
+  const solve = () => {
+	try {
+	  const result = LinearAlgebra.gaussianElimination(coefficients, constants)
+	  setSolution(result)
+	} catch (error) {
+	  setSolution({
+		isUnique: false,
+		hasInfiniteSolutions: false,
+		hasNoSolution: true,
+		steps: [error instanceof Error ? error.message : 'Errore sconosciuto']
+	  })
+	}
+  }
+
+  const renderSystemInput = () => {
+	return (
+	  <div className="input-group">
+		<label>Sistema di Equazioni Lineari</label>
+		<div style={{ marginBottom: '1rem' }}>
+		  <label>
+			Dimensione sistema: 
+			<select 
+			  value={systemSize} 
+			  onChange={(e) => updateSystemSize(parseInt(e.target.value))}
+			  style={{ marginLeft: '0.5rem', width: '60px' }}
+			>
+			  {[2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+			</select>
+		  </label>
+		</div>
+		
+		<div style={{ overflowX: 'auto' }}>
+		  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0.5rem' }}>
+			<thead>
+			  <tr>
+				{Array(systemSize).fill(0).map((_, i) => (
+				  <th key={i} style={{ textAlign: 'center' }}>x{i + 1}</th>
+				))}
+				<th></th>
+				<th>b</th>
+			  </tr>
+			</thead>
+			<tbody>
+			  {coefficients.map((row, i) => (
+				<tr key={i}>
+				  {row.map((value, j) => (
+					<td key={j}>
+					  <input
+						type="number"
+						step="any"
+						className="matrix-input"
+						value={value}
+						onChange={(e) => updateCoefficient(i, j, e.target.value)}
+						style={{ width: '80px' }}
+					  />
+					</td>
+				  ))}
+				  <td style={{ textAlign: 'center', fontSize: '1.2rem' }}>=</td>
+				  <td>
+					<input
+					  type="number"
+					  step="any"
+					  className="matrix-input"
+					  value={constants[i]}
+					  onChange={(e) => updateConstant(i, e.target.value)}
+					  style={{ width: '80px' }}
+					/>
+				  </td>
+				</tr>
+			  ))}
+			</tbody>
+		  </table>
+		</div>
+	  </div>
+	)
+  }
+
+  const renderSolution = () => {
+	if (!solution) return null
+
+	return (
+	  <div className="result-section">
+		<h3 className="result-title">Soluzione del Sistema</h3>
+		
+		{solution.hasNoSolution && (
+		  <div className="error">
+			<strong>Sistema inconsistente:</strong> Non esistono soluzioni.
+		  </div>
+		)}
+		
+		{solution.hasInfiniteSolutions && (
+		  <div style={{ padding: '1rem', background: '#fff3cd', border: '1px solid #ffeaa7', borderRadius: '4px' }}>
+			<strong>Sistema indeterminato:</strong> Infinite soluzioni.
+		  </div>
+		)}
+		
+		{solution.isUnique && solution.solution && (
+		  <div>
+			<h4>Soluzione unica:</h4>
+			<div className="result-vector">
+			  {solution.solution.map((value, index) => (
+				<div key={index} style={{ marginBottom: '0.5rem' }}>
+				  <strong>x{index + 1} = {value.toFixed(6)}</strong>
+				</div>
+			  ))}
+			</div>
+		  </div>
+		)}
+		
+		<div style={{ marginTop: '1rem' }}>
+		  <label style={{ display: 'flex', alignItems: 'center' }}>
+			<input
+			  type="checkbox"
+			  checked={showSteps}
+			  onChange={(e) => setShowSteps(e.target.checked)}
+			  style={{ marginRight: '0.5rem' }}
+			/>
+			Mostra passaggi dettagliati
+		  </label>
+		</div>
+		
+		{showSteps && solution.steps.length > 0 && (
+		  <div className="steps-container" style={{ marginTop: '1rem' }}>
+			<h4>Passaggi della risoluzione (MEG):</h4>
+			{solution.steps.map((step, index) => (
+			  <div key={index} className="step">
+				<div style={{ marginBottom: '0.5rem' }}>
+				  <strong>Passo {index + 1}:</strong>
+				</div>
+				<pre style={{ 
+				  whiteSpace: 'pre-wrap', 
+				  fontFamily: 'Courier New, monospace', 
+				  background: '#f8f9fa', 
+				  padding: '0.5rem', 
+				  borderRadius: '4px',
+				  fontSize: '0.9rem'
+				}}>
+				  {step}
+				</pre>
+			  </div>
+			))}
+		  </div>
+		)}
+	  </div>
+	)
+  }
+
+  return (
+	<div className="calculator-container">
+	  <h2 className="calculator-title">⚖️ Risolutore di Sistemi Lineari</h2>
+	  <p style={{ textAlign: 'center', marginBottom: '2rem', color: '#666' }}>
+		Risolve sistemi di equazioni lineari usando il Metodo di Eliminazione di Gauss (MEG)
+	  </p>
+	  
+	  {renderSystemInput()}
+
+	  <div className="btn-group" style={{ marginTop: '1.5rem' }}>
+		<button className="btn btn-primary" onClick={solve}>
+		  Risolvi Sistema
+		</button>
+		<button 
+		  className="btn btn-secondary" 
+		  onClick={() => {
+			updateSystemSize(3)
+			setCoefficients([
+			  [2, 1, -1],
+			  [-3, -1, 2],
+			  [-2, 1, 2]
+			])
+			setConstants([8, -11, -3])
+			setSolution(null)
+			setShowSteps(false)
+		  }}
+		>
+		  Esempio
+		</button>
+		<button 
+		  className="btn btn-danger" 
+		  onClick={() => {
+			setSolution(null)
+			setShowSteps(false)
+		  }}
+		>
+		  Pulisci Risultati
+		</button>
+	  </div>
+
+	  {renderSolution()}
+	  
+	  <div style={{ marginTop: '2rem', padding: '1rem', background: '#e3f2fd', borderRadius: '6px', fontSize: '0.9rem' }}>
+		<h4 style={{ marginBottom: '1rem', color: '#1976d2' }}>ℹ️ Informazioni sul MEG</h4>
+		<p><strong>Metodo di Eliminazione di Gauss:</strong></p>
+		<ul style={{ marginLeft: '1rem', lineHeight: '1.6' }}>
+		  <li>Trasforma il sistema in forma triangolare superiore</li>
+		  <li>Usa la sostituzione all'indietro per trovare le soluzioni</li>
+		  <li>Rileva automaticamente sistemi inconsistenti o indeterminati</li>
+		  <li>Mostra tutti i passaggi della risoluzione</li>
+		</ul>
+	  </div>
+	</div>
+  )
+}
+
+export default LinearSystemSolver
